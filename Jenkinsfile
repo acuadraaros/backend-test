@@ -62,16 +62,25 @@ pipeline {
                 }
             }
         }
-        stage("delivery - subida a nexus"){
-           steps{
+        stage("delivery - subida a nexus") {
+            steps {
                 script {
-                    docker.withRegistry("http://localhost:8082", "registry"){
+                    docker.withRegistry("http://localhost:8082", "registry") {
+                        // Construir la imagen Docker
                         sh 'docker build -t backend-test .'
+                        
+                        // Etiquetar la imagen con "latest"
                         sh 'docker tag backend-test:latest localhost:8082/backend-test:latest'
                         sh 'docker push localhost:8082/backend-test:latest'
+                        
+                        // Etiquetar la imagen con el número de build
+                        sh "docker tag backend-test:latest localhost:8082/backend-test:${env.BUILD_NUMBER}"
+                        
+                        // Push de la imagen con la etiqueta de número de build
+                        sh "docker push localhost:8082/backend-test:${env.BUILD_NUMBER}"
                     }
                 }
-           } 
-        }    
+            }
+        }
     }
 }
