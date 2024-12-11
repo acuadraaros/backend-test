@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-test
+  namespace: devops
+  labels:
+    app: backend-test
+spec:
+  replicas: 6
+  selector:
+    matchLabels:
+      app: backend-test
+  template:
+    metadata:
+      labels:
+        app: backend-test
+    spec:
+      containers:
+      - name: backend-test
+        image: 192.168.31.90:8082/backend-test:latest
+        imagePullPolicy: Always
+        env:
+        - name: USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: backend-test-cm
+              key: USERNAME
+        - name: APIKEY
+          valueFrom:
+            secretKeyRef:
+              name: backend-test-sc
+              key: APIKEY
+      imagePullSecrets:
+      - name: regcred
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-test
+  namespace: devops
+  labels:
+    app: backend-test
+spec:
+  selector:
+    app: backend-test
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 3000
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-backend-test
+  namespace: devops
+  annotations:
+    cert-manager.io/cluster.issuer: letsencrypt-staging
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - "cmd.devops.cl"
+    secretName: backend-base-tls
+  rules:
+  - host: cmd.devops.cl
+    http:
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+          backend:
+            service:
+              name: backend-test
+              port:
+                number: 80
+
